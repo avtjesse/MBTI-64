@@ -2,7 +2,7 @@ import { GoogleGenAI } from "@google/genai";
 import { animalData } from "../src/data/animals";
 import type { MBTIResult } from "../src/services/gemini";
 
-const model = "gemini-3-flash-preview";
+const model = "gemini-2.5-flash";
 
 function buildPrompt(result: MBTIResult) {
   const animalInfo = animalData[result.typeCode] || {
@@ -77,6 +77,8 @@ export default async function handler(req: any, res: any) {
     res.status(200).json({ analysis: response.text ?? "" });
   } catch (error) {
     console.error("Gemini API Error:", error);
-    res.status(500).json({ error: "Failed to generate analysis" });
+    const message =
+      error instanceof Error ? error.message : "Failed to generate analysis";
+    res.status(500).json({ error: message });
   }
 }

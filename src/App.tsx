@@ -253,7 +253,8 @@ export default function App() {
           return updated;
         });
       } catch (err) {
-        setAnalysis("分析生成失敗，請檢查網路連接或 API 設定。");
+        const message = err instanceof Error ? err.message : '請檢查網路連接或 API 設定。';
+        setAnalysis(`分析生成失敗：${message}`);
       } finally {
         setIsGeneratingAnalysis(false);
       }
