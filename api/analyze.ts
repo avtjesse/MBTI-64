@@ -13,18 +13,18 @@ function buildPrompt(result: MBTIResult) {
   };
 
   return `
-請你擔任一位溫暖、具洞察力的 MBTI 64 型人格分析師。
+你是一位擅长人格分析的顾问，请使用繁体中文撰写一篇 MBTI 64 型深度解析。
 
-使用者資料：
+对象资料：
 - 名字：${result.name}
-- 性別：${result.gender}
+- 性别：${result.gender}
 - 生日：${result.birthday}
 - 星座：${result.zodiac}
 - 血型：${result.bloodType}
 - MBTI 64 型：${result.typeCode}
-- 對應動物人格：${animalInfo.animal} ${animalInfo.emoji}（${animalInfo.groupName} - ${animalInfo.suffixName}）
+- 动物人格：${animalInfo.animal} ${animalInfo.emoji}（${animalInfo.groupName} / ${animalInfo.suffixName}）
 
-六大向度分數（0-100，越高越偏向前者）：
+六大维度分数（0 到 100，越高越偏向前者）：
 - E / I：${result.scores.EI}
 - S / N：${result.scores.SN}
 - T / F：${result.scores.TF}
@@ -32,21 +32,49 @@ function buildPrompt(result: MBTIResult) {
 - A / O：${result.scores.AO}
 - H / C：${result.scores.HC}
 
-請用繁體中文撰寫一篇 600 到 800 字的深度分析，結合 MBTI、動物人格、星座與血型做整體解讀，但仍以 MBTI 與六維分數為主軸，不要寫得太玄。
+请输出 600 到 800 字，内容包含：
+1. 核心人格气质
+2. 优势与潜能
+3. 可能盲点与压力反应
+4. 2 到 3 条可执行建议
 
-請包含以下內容：
-1. 核心人格總評：說明此人格最鮮明的氣質、思考模式與給人的感受。
-2. 優勢與天賦：分析這類型在學習、工作、人際或決策上的優勢。
-3. 盲點與壓力反應：描述可能的內耗、誤區與在壓力下的表現。
-4. 可執行建議：給 2 到 3 點具體可落地的建議。
-
-輸出要求：
+输出要求：
 - 使用 Markdown
-- 加上清楚的小標題
-- 語氣自然、真誠、有洞察
-- 不要輸出 JSON
-- 不要重複列資料
+- 加上小标题
+- 语气自然、具体、有洞察
+- 以 MBTI 与分数为主，星座与血型仅作轻度辅助
+- 不要输出 JSON
 `;
+}
+
+function normalizeError(error: unknown) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === "string") {
+    return error;
+  }
+
+  if (error && typeof error === "object") {
+    const maybeMessage = (error as { message?: unknown }).message;
+    if (typeof maybeMessage === "string" && maybeMessage.trim()) {
+      return maybeMessage;
+    }
+
+    const maybeError = (error as { error?: unknown }).error;
+    if (typeof maybeError === "string" && maybeError.trim()) {
+      return maybeError;
+    }
+
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return "Unknown server error";
+    }
+  }
+
+  return "Unknown server error";
 }
 
 export default async function handler(req: any, res: any) {
@@ -74,11 +102,16 @@ export default async function handler(req: any, res: any) {
       contents: buildPrompt(result),
     });
 
-    res.status(200).json({ analysis: response.text ?? "" });
+    const analysis = response.text?.trim();
+    if (!analysis) {
+      res.status(502).json({ error: "Gemini returned an empty response" });
+      return;
+    }
+
+    res.status(200).json({ analysis });
   } catch (error) {
+    const message = normalizeError(error);
     console.error("Gemini API Error:", error);
-    const message =
-      error instanceof Error ? error.message : "Failed to generate analysis";
     res.status(500).json({ error: message });
   }
 }
