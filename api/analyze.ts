@@ -1,4 +1,3 @@
-import { GoogleGenAI } from "@google/genai";
 import { animalData } from "../src/data/animals";
 import type { MBTIResult } from "../src/services/gemini";
 
@@ -96,13 +95,42 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const ai = new GoogleGenAI({ apiKey });
-    const response = await ai.models.generateContent({
-      model,
-      contents: buildPrompt(result),
-    });
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  text: buildPrompt(result),
+                },
+              ],
+            },
+          ],
+        }),
+      },
+    );
 
-    const analysis = response.text?.trim();
+    if (!response.ok) {
+      const errorText = await response.text();
+      res.status(response.status).json({
+        error: errorText || `Gemini API request failed with status ${response.status}`,
+      });
+      return;
+    }
+
+    const data = await response.json();
+    const analysis =
+      data?.candidates?.[0]?.content?.parts
+        ?.map((part: { text?: string }) => part.text || "")
+        .join("")
+        .trim() || "";
+
     if (!analysis) {
       res.status(502).json({ error: "Gemini returned an empty response" });
       return;
