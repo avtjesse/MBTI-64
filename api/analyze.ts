@@ -1,16 +1,8 @@
-import { animalData } from "../src/data/animals";
 import type { MBTIResult } from "../src/services/gemini";
 
 const model = "gemini-2.5-flash";
 
 function buildPrompt(result: MBTIResult) {
-  const animalInfo = animalData[result.typeCode] || {
-    animal: "Unknown Animal",
-    emoji: "🦊",
-    groupName: "Unknown Group",
-    suffixName: "Unknown Type",
-  };
-
   return `
 你是一位擅长人格分析的顾问，请使用繁体中文撰写一篇 MBTI 64 型深度解析。
 
@@ -21,7 +13,6 @@ function buildPrompt(result: MBTIResult) {
 - 星座：${result.zodiac}
 - 血型：${result.bloodType}
 - MBTI 64 型：${result.typeCode}
-- 动物人格：${animalInfo.animal} ${animalInfo.emoji}（${animalInfo.groupName} / ${animalInfo.suffixName}）
 
 六大维度分数（0 到 100，越高越偏向前者）：
 - E / I：${result.scores.EI}
